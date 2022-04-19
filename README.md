@@ -24,3 +24,9 @@ Sul server web è necessario che siano installati:
 * Modulo _dom_ per PHP
 ### Altri programmi di podcast
 In linea di principio è possibile utilizzare la pagina php, a patto che possano fare una richiesta http autenticata (basic authentication) al server web, tuttavia al momento non sono state testate applicazioni diverse da _Podcast Addict_ su Android.
+## Istanze installate
+E' possibile trovare un'istanza della pagina presso
+>https://www.funandfood.it/podcast-ilpost/
+
+Quindi per scaricare il feed di "Ci vuole una scienza" l'indirizzo è:
+>https://www.funandfood.it/podcast-ilpost/?podcast=ci-vuole-una-scienza

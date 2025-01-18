@@ -110,7 +110,8 @@ curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie);
 curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 $feed_data = curl_exec($ch);
-file_put_contents('log/feed.html', $feed_data);
+$feed_data = trim($feed_data);
+file_put_contents('log/feed_' . $podcast . '.xml', $feed_data);
 curl_close($ch);
 
 $feed_dom = new DOMDocument();

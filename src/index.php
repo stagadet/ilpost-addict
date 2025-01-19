@@ -1,5 +1,5 @@
 <?php
-    $loglevel = 0;
+    $loglevel = 1;
 	if (!isset($_SERVER['PHP_AUTH_USER'])) {
 	//Reject unauthenticated requests (needed for podcastAddict to send username and password
         header('WWW-Authenticate: Basic realm="www.ilpost.it"');
@@ -82,6 +82,21 @@
 
 	$doc = new DOMDocument();
 	$doc->loadHTML($podcast_page);
+	
+    // Find the image in the div with class "_podcast-header__image_1asv1_29"
+    $xpath = new DOMXPath($doc);
+    $div = $xpath->query('//div[contains(@class, "_podcast-header__image_1asv1_29")]')->item(0);
+    $imageUrl = null;
+    if ($div) {
+        $img = $div->getElementsByTagName('img')->item(0);
+        if ($img) {
+            $imageUrl = $img->getAttribute('src');
+            if ($loglevel >= 1) {
+                file_put_contents('log/req.log', "Image URL: ".$imageUrl.PHP_EOL, FILE_APPEND);
+            }
+        }
+    }
+	
 	$podcast_node = $doc->getElementById("ilpost-podcast-custom-js-extra");
 	$podcast_start_json = stripos($podcast_node->textContent, "{");
 	$podcast_end_json = stripos($podcast_node->textContent, ";");
@@ -157,6 +172,10 @@
 	$feed_dom->getElementsByTagName("rss")->item(0)->setAttribute("xmlns:itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
 	$feed_dom->formatOutput = true;
 	$channel = $feed_dom->getElementsByTagName("rss")->item(0)->getElementsByTagName("channel")->item(0);
+    // Update the image URL
+    if ($imageUrl) {
+        $channel->getElementsByTagName("image")->item(0)->getElementsByTagName("url")->item(0)->nodeValue = $imageUrl;
+    }
 	//Add "itunes:block" to make the feed private
 	$channel->insertBefore($feed_dom->createElement("itunes:block", "yes"), $channel->firstChild);
 	//Add mp3 enclosure tag to podcast rss feed

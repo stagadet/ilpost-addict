@@ -1,5 +1,5 @@
 <?php
-    $loglevel = 1;
+    $loglevel = 0;
 	if (!isset($_SERVER['PHP_AUTH_USER'])) {
 	//Reject unauthenticated requests (needed for podcastAddict to send username and password
         header('WWW-Authenticate: Basic realm="www.ilpost.it"');
@@ -83,9 +83,9 @@
 	$doc = new DOMDocument();
 	$doc->loadHTML($podcast_page);
 	
-    // Find the image in the div with class "_podcast-header__image_1asv1_29"
+    // Find the image in the div with class "_podcast-header__image_10bfc_29"
     $xpath = new DOMXPath($doc);
-    $div = $xpath->query('//div[contains(@class, "_podcast-header__image_1asv1_29")]')->item(0);
+    $div = $xpath->query('//div[contains(@class, "_podcast-header__image_10bfc_29")]')->item(0);
     $imageUrl = null;
     if ($div) {
         $img = $div->getElementsByTagName('img')->item(0);
@@ -96,7 +96,8 @@
             }
         }
     }
-	
+	/*
+	//Removed: data is no longer on the __NEXT_DATA__ script
 	$podcast_node = $doc->getElementById("ilpost-podcast-custom-js-extra");
 	$podcast_start_json = stripos($podcast_node->textContent, "{");
 	$podcast_end_json = stripos($podcast_node->textContent, ";");
@@ -105,7 +106,7 @@
 	}
 	$podcast_json = json_decode(substr($podcast_node->textContent, $podcast_start_json, $podcast_end_json - $podcast_start_json));
     
-    /*Get mp3 data from the script at the end of the page*/
+    //Get mp3 data from the script at the end of the page
     $data_node = $doc->getElementById("__NEXT_DATA__");
     $private_data = $data_node->textContent;
 	if ($loglevel >= 3) {
@@ -119,38 +120,7 @@
 		if ($loglevel >= 5) {
 		    file_put_contents('log/req.log', $episode->id.": ".$episode->episode_raw_url."\r\n", FILE_APPEND);
 		}
-	}
-    /* url_mp3 doesn't provide data anymore
-	//Request podcast data to get mp3 files location
-	$data_mp3 = "action=checkpodcast";
-	$data_mp3 .= "&cookie=wordpress_logged_in_5750c61ce9761193028d298b19b5c708";
-	$data_mp3 .= "&post_id=0";
-	$data_mp3 .= "&podcast_id=".$podcast_json->podcast_id;
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $url_mp3);
-	curl_setopt($ch, CURLOPT_HEADER, 0);
-	curl_setopt($ch, CURLOPT_COOKIESESSION, false );
-	curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie );
-	curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie );
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	curl_setopt($ch, CURLOPT_POST, true);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $data_mp3);
-	$private_data = curl_exec($ch);
-	if ($loglevel >= 3) {
-	    file_put_contents('log/post_data.txt', $data_mp3);
-	    file_put_contents('log/private.html', $private_data);
-	}
-	curl_close($ch);
-	$result = json_decode($private_data);
-	file_put_contents('log/req.log', "data->msg: ".$result->data->msg."\r\n", FILE_APPEND);
-	file_put_contents('log/req.log', "data->podcastList[0].id: ".$result->data->postcastList[0]->id."\r\n", FILE_APPEND);
-	foreach ($result->data->postcastList as $episode) {
-		$mp3_array[$episode->id] = $episode->podcast_raw_url;
-		if ($loglevel >= 5) {
-		    file_put_contents('log/req.log', $episode->id.": ".$episode->podcast_raw_url."\r\n", FILE_APPEND);
-		}
-	}*/
-	
+	}/**/
     
 	//Get the rss feed of the podcast (without mp3 enclosure)
 	$ch = curl_init();
@@ -165,6 +135,7 @@
 	    file_put_contents('log/feed.html', $feed_data);
 	}
 	curl_close($ch);
+	
 	//Create feed to be enriched with mp3 file enclosure
 	$feed_dom = new DOMDocument();
 	$feed_dom->preserveWhiteSpace = false;
@@ -178,6 +149,43 @@
     }
 	//Add "itunes:block" to make the feed private
 	$channel->insertBefore($feed_dom->createElement("itunes:block", "yes"), $channel->firstChild);
+	
+	//Get last episode name
+	$lastEpisodeName = basename(rtrim(parse_url($channel->getElementsByTagName("item")->item(0)->getElementsByTagName("link")->item(0)->nodeValue, PHP_URL_PATH), '/'));
+	if ($loglevel >= 3) {
+	    file_put_contents('log/lastEpisodeName.txt', $lastEpisodeName );
+	}
+	//Get the private data
+	$ch = curl_init();
+	$privateUrl = "https://api-prod.ilpost.it/podcast/v1/bff/podcast/".$podcast."/".$lastEpisodeName . "/";
+	curl_setopt($ch, CURLOPT_URL, $privateUrl);
+	curl_setopt($ch, CURLOPT_HEADER, 0);
+	//curl_setopt($ch, CURLOPT_COOKIESESSION, false );
+	//curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie );
+	//curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie );
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	$private_data = curl_exec($ch);
+	if ($loglevel >= 3) {
+	    file_put_contents('log/privateUrl.txt', $privateUrl);
+	    file_put_contents('log/private.json', $private_data);
+	}
+	curl_close($ch);
+	$result = json_decode($private_data);
+	//file_put_contents('log/req.log', "data->msg: ".$result->data->msg."\r\n", FILE_APPEND);
+	//file_put_contents('log/req.log', "data->podcastList[0].id: ".$result->data->postcastList[0]->id."\r\n", FILE_APPEND);
+	foreach ($result->data->episode->data as $episode) {
+		$mp3_array[$episode->id] = $episode->episode_raw_url;
+		if ($loglevel >= 5) {
+		    file_put_contents('log/req.log', $episode->id.": ".$episode->episode_raw_url."\r\n", FILE_APPEND);
+		}
+	}
+	foreach ($result->data->related->data as $episode) {
+		$mp3_array[$episode->id] = $episode->episode_raw_url;
+		if ($loglevel >= 5) {
+		    file_put_contents('log/req.log', $episode->id.": ".$episode->episode_raw_url."\r\n", FILE_APPEND);
+		}
+	}
+	
 	//Add mp3 enclosure tag to podcast rss feed
 	foreach($channel->getElementsByTagName("item") as $item) {
 		$enclosure = $feed_dom->createElement("enclosure");

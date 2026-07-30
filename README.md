@@ -19,7 +19,7 @@ Per esempio, per recuperare il feed di _Tienimi bordone_ bisognerà puntare a:
 >www.mioserver.it/ilpost-addict/?podcast=tienimi-bordone
 ### Requisiti
 Sul server web è necessario che siano installati:
-* PHP (testato su versione 7.4, ma non dovrebbero esserci particolari problemi con altre versioni)
+* PHP (testato su versione 8.4, ma non dovrebbero esserci particolari problemi con altre versioni)
 * Modulo _curl_ per PHP
 * Modulo _dom_ per PHP
 ### Altri programmi di podcast

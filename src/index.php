@@ -38,6 +38,9 @@
 	    file_put_contents('log/nonce.html', $nonce_page);
 	}
  	curl_close($ch);
+ 	if ($loglevel < 1) {
+ 	    libxml_use_internal_errors(true);
+ 	}
 	$doc = new DOMDocument();
 	$doc->loadHTML($nonce_page);
 	$nonce_node = $doc->getElementById("woocommerce-login-nonce");
@@ -85,7 +88,7 @@
 	
     // Find the image in the div with class "_podcast-header__image_10bfc_29"
     $xpath = new DOMXPath($doc);
-    $div = $xpath->query('//div[contains(@class, "_podcast-header__image_10bfc_29")]')->item(0);
+    $div = $xpath->query('//div[contains(@class, "_podcast-header__image")]')->item(0);
     $imageUrl = null;
     if ($div) {
         $img = $div->getElementsByTagName('img')->item(0);
@@ -188,14 +191,16 @@
 	
 	//Add mp3 enclosure tag to podcast rss feed
 	foreach($channel->getElementsByTagName("item") as $item) {
-		$enclosure = $feed_dom->createElement("enclosure");
 		$guid = $item->getElementsByTagName("guid")->item(0)->nodeValue;
 		$id = substr($guid, stripos($guid, "p=") + 2);
-		$enclosure->setAttribute("url", $mp3_array[$id]);
-		$enclosure->setAttribute("type", "audio/mpeg");
-		if ($mp3_array[$id] != null) {
-			$item->appendChild($enclosure);
-		}
+	    if (isset($mp3_array[$id])) {
+		    $enclosure = $feed_dom->createElement("enclosure");
+    		$enclosure->setAttribute("url", $mp3_array[$id]);
+    		$enclosure->setAttribute("type", "audio/mpeg");
+    		if ($mp3_array[$id] != null) {
+    			$item->appendChild($enclosure);
+    		}
+	    }
 		//$test = $feed_dom->createElement("test");
 		//$test->setAttribute("id", $id);
 		//$item->appendChild($test);
@@ -204,6 +209,10 @@
 	if ($loglevel < 5) {
 	    unlink($cookie);
 	}
+ 	if ($loglevel < 1) {
+ 	    libxml_clear_errors();
+        libxml_use_internal_errors(false);
+ 	}
 	//Return enriched rss feed
 	echo $feed_dom->saveXML();
 
